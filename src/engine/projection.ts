@@ -51,6 +51,7 @@ export function runProjection(inputs: UserInputs): ProjectionOutput {
     const projectionEndAge = inputs.scenario === 'Long Life' ? Math.max(inputs.lifeExpectancy + 5, 100) : Math.max(inputs.lifeExpectancy, 100);
 
     let cumulativeIlaIncome = 0;
+    let currentSpouseSuper = inputs.coupleStatus === 'Couple' ? inputs.spouseSuperBalance : 0;
 
     for (let currentAge = purchaseAge; currentAge <= projectionEndAge; currentAge++) {
         const year = currentAge - purchaseAge + 1;
@@ -73,6 +74,17 @@ export function runProjection(inputs: UserInputs): ProjectionOutput {
             currentIlaIncome = ilaIncome;
         }
         cumulativeIlaIncome += ilaIncome;
+
+        // Spouse Super Depletion (assumed 100% ABP at minimum statutory drawdown)
+        let spouseClosingBalance = 0;
+        if (inputs.coupleStatus === 'Couple' && currentSpouseSuper > 0) {
+            const currentSpouseAge = inputs.spouseAge + (year - 1);
+            const spouseInvestmentReturn = currentSpouseSuper * strategyReturn;
+            const maxAvailable = currentSpouseSuper + spouseInvestmentReturn;
+            const spouseDrawdown = calculateABPDrawdown(maxAvailable, currentSpouseAge, 'Minimum statutory', 0, 0, 1);
+            spouseClosingBalance = maxAvailable - spouseDrawdown;
+            currentSpouseSuper = spouseClosingBalance;
+        }
 
         // 4-11: ABP Drawdown & Age Pension (Target Income Iteration)
         let bestDrawdown = 0;
@@ -102,8 +114,8 @@ export function runProjection(inputs: UserInputs): ProjectionOutput {
             currentDrawdown = Math.max(minDrawdown, Math.min(currentDrawdown, maxAvailableDrawdown));
 
             const testClosingBalance = maxAvailableDrawdown - currentDrawdown;
-            const assessAssets = calculateAssessableAssets(inputs, testClosingBalance, ilaPurchasePrice, year, currentAge);
-            const deemedInc = calculateDeemedIncome(inputs, testClosingBalance);
+            const assessAssets = calculateAssessableAssets(inputs, testClosingBalance, ilaPurchasePrice, year, currentAge, spouseClosingBalance);
+            const deemedInc = calculateDeemedIncome(inputs, testClosingBalance, spouseClosingBalance);
             const assessInc = calculateAssessableIncome(inputs, deemedInc, ilaIncome);
             const apCalc = calculateAgePension(inputs, assessAssets, assessInc, inflationFactor);
 
@@ -155,6 +167,7 @@ export function runProjection(inputs: UserInputs): ProjectionOutput {
             year,
             age: currentAge,
             spouseAge: inputs.coupleStatus === 'Couple' ? inputs.spouseAge + (year - 1) : 0,
+            spouseSuperBalance: real(spouseClosingBalance),
             openingABPBalance: real(openingABPBalance),
             abpInvestmentReturn: real(abpInvestmentReturn),
             ilaIncome: real(ilaIncome),

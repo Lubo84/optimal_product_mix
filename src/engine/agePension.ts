@@ -42,7 +42,8 @@ export function calculateAssessableAssets(
     abpBalance: number,
     ilaPurchasePrice: number,
     yearsSincePurchase: number,
-    currentAge: number
+    currentAge: number,
+    spouseSuperBalance: number
 ): number {
     const purchaseAge = currentAge - yearsSincePurchase;
     const thresholdAge = Math.max(84, purchaseAge + 5);
@@ -54,7 +55,7 @@ export function calculateAssessableAssets(
     let baseAssets = abpBalance + assessableILA + inputs.financialAssets + inputs.nonFinancialAssets;
 
     if (inputs.coupleStatus === 'Couple') {
-        baseAssets += inputs.spouseSuperBalance; // For simplicity, spouse super assumed 100% ABP
+        baseAssets += spouseSuperBalance; // For simplicity, spouse super assumed 100% ABP
     }
 
     return baseAssets;
@@ -63,11 +64,12 @@ export function calculateAssessableAssets(
 // Evaluate Deemed Income
 export function calculateDeemedIncome(
     inputs: UserInputs,
-    abpBalance: number
+    abpBalance: number,
+    spouseSuperBalance: number
 ): number {
     let deemedAssets = abpBalance + inputs.financialAssets;
     if (inputs.coupleStatus === 'Couple') {
-        deemedAssets += inputs.spouseSuperBalance;
+        deemedAssets += spouseSuperBalance;
     }
 
     const threshold = inputs.coupleStatus === 'Single' ? AP_PARAMS.deemingThresholdSingle : AP_PARAMS.deemingThresholdCoupleCombined;

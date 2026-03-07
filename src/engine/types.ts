@@ -77,6 +77,7 @@ export interface ProjectionYearOutput {
     year: number;
     age: number;
     spouseAge: number;
+    spouseSuperBalance: number;
 
     openingABPBalance: number;
     abpInvestmentReturn: number;
