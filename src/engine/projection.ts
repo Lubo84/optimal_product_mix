@@ -119,15 +119,19 @@ export function runProjection(inputs: UserInputs): ProjectionOutput {
             const assessInc = calculateAssessableIncome(inputs, deemedInc, ilaIncome);
             const apCalc = calculateAgePension(inputs, assessAssets, assessInc, inflationFactor);
 
-            let ap = apCalc.pensionPayable;
+            let ap = Math.max(0, apCalc.pensionPayable);
             let ra = 0;
+
             if (inputs.homeowner === 'No') {
                 let maxRA = (inputs.coupleStatus === 'Single' ? AP_PARAMS.rentMaxRateSingle : AP_PARAMS.rentMaxRateCoupleCombined) * inflationFactor;
                 let maxPension = (inputs.coupleStatus === 'Single' ? AP_PARAMS.maxRateSingle : AP_PARAMS.maxRateCoupleCombined) * inflationFactor;
+
                 const greaterReduction = Math.max(apCalc.assetsTestReduction, apCalc.incomeTestReduction);
+
+                // If they are eligible for at least $1 of Age Pension OR Rent Assistance covers the reduction gap
                 let totalEntitlement = Math.max(0, maxPension + maxRA - greaterReduction);
                 ra = Math.min(maxRA, totalEntitlement);
-                ap = totalEntitlement - ra;
+                ap = Math.max(0, totalEntitlement - ra); // Base pension is the remainder
             }
 
             let totalInc = currentDrawdown + ilaIncome + ap + ra;
@@ -135,7 +139,7 @@ export function runProjection(inputs: UserInputs): ProjectionOutput {
             finalAssessableAssets = assessAssets;
             finalDeemedIncome = deemedInc;
             finalAssessableIncome = assessInc;
-            finalAgePensionCalc = apCalc;
+            finalAgePensionCalc = { ...apCalc, pensionPayable: ap };
             finalRentAssistance = ra;
             finalTotalIncome = totalInc;
 

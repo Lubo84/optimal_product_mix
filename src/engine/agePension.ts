@@ -108,7 +108,7 @@ export function getAssetsTestReduction(inputs: UserInputs, assessableAssets: num
 
     const excess = assessableAssets - threshold;
     // $3.00 reduction per fortnight per $1000 of excess -> Annualised: (Excess / 1000) * 3.00 * 26
-    return (excess / 1000) * AP_PARAMS.assetTaperFortnightly * 26;
+    return Math.floor(excess / 1000) * AP_PARAMS.assetTaperFortnightly * 26;
 }
 
 // Income Test Reduction (Annualised)
@@ -127,7 +127,6 @@ export function getIncomeTestReduction(inputs: UserInputs, assessableIncome: num
 
 export interface AgePensionResult {
     pensionPayable: number;
-    rentAssistance: number;
     assetsTestReduction: number;
     incomeTestReduction: number;
     bindingTest: 'Assets' | 'Income' | 'None';
@@ -161,32 +160,8 @@ export function calculateAgePension(
 
     let pensionPayable = Math.max(0, maxPension - greaterReduction);
 
-    // Over threshold implies nil pension
-    if (pensionPayable <= 0) {
-        pensionPayable = 0;
-    }
-
-    // Rent Assistance
-    let rentAssistance = 0;
-    if (inputs.homeowner === 'No') {
-        // Renter receiving Age Pension (including nil-rate Age Pension if within threshold)
-        // Actually if pensionPayable <= 0 and they are completely cut off they don't get RA.
-        // The spec says: "(including nil-rate Age Pension if within threshold)" - but RA is added to base pension and then tapered down to 0 together under the income/assets test.
-        // Simplifying assumption per spec: if they are eligible for pension, they get max rate Rent Assistance.
-        // Actually the logic is simpler: "Model assumption: Rent paid assumed to exceed threshold — model applies maximum Rent Assistance rate (user does not input rent amount)"
-        // Rent assistance is added to total entitlement.
-        let maxRA = inputs.coupleStatus === 'Single' ? AP_PARAMS.rentMaxRateSingle : AP_PARAMS.rentMaxRateCoupleCombined;
-        maxRA *= inflationFactor;
-
-        if (maxPension + maxRA - greaterReduction > 0) {
-            rentAssistance = maxRA; // Assumes max RA is always fully utilized if there's any pension left
-            pensionPayable = Math.max(0, maxPension + rentAssistance - greaterReduction); // Recompute total
-        }
-    }
-
     return {
-        pensionPayable, // includes RA per the logic above, but let's separate them in output
-        rentAssistance,
+        pensionPayable, // Purely the age pension component (no RA yet)
         assetsTestReduction: assetsReduction,
         incomeTestReduction: incomeReduction,
         bindingTest
