@@ -74,9 +74,13 @@ export function generateOptimiserOutput(inputs: UserInputs) {
     const results = runOptimiser(inputs);
 
     // Identify split with highest composite score
-    const optimal = results.reduce((prev, current) =>
-        (prev.metrics.compositeScore > current.metrics.compositeScore) ? prev : current
-    );
+    const optimal = results.reduce((prev, current) => {
+        // Tie breaker: if composite scores are identical, prefer the one with highest Flexibility (lowest ILA split)
+        if (Math.abs(prev.metrics.compositeScore - current.metrics.compositeScore) < 0.1) {
+            return (prev.metrics.flexibilityScore > current.metrics.flexibilityScore) ? prev : current;
+        }
+        return (prev.metrics.compositeScore > current.metrics.compositeScore) ? prev : current;
+    });
 
     return {
         optimal,
