@@ -86,7 +86,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, inputs }) => {
                 <ResponsiveContainer width="100%" height="90%">
                     <AreaChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                         <XAxis dataKey="age" stroke="var(--color-text-muted)" />
-                        <YAxis stroke="var(--color-text-muted)" tickFormatter={(val) => `$${val / 1000}k`} />
+                        <YAxis stroke="var(--color-text-muted)" tickFormatter={(val) => `$${Math.round(val / 1000)}k`} />
                         <Tooltip content={<CustomTooltip />} />
                         <Legend />
                         <Area type="monotone" dataKey="abpDrawdown" name="ABP Drawdown" stackId="1" stroke="var(--color-chart-abp)" fill="var(--color-chart-abp)" fillOpacity={0.6} />
@@ -101,9 +101,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, inputs }) => {
             <div className="glass-panel" style={{ gridColumn: 'span 4', padding: '1.5rem', height: '400px', display: 'flex', flexDirection: 'column' }}>
                 <h4>RIC Objective Alignment</h4>
                 <ResponsiveContainer width="100%" height="100%">
-                    <RadarChart cx="50%" cy="50%" outerRadius="70%" data={radarData}>
+                    <RadarChart cx="50%" cy="50%" outerRadius="60%" margin={{ top: 10, right: 30, bottom: 10, left: 30 }} data={radarData}>
                         <PolarGrid stroke="rgba(255,255,255,0.1)" />
-                        <PolarAngleAxis dataKey="subject" tick={{ fill: 'var(--color-text-secondary)' }} />
+                        <PolarAngleAxis dataKey="subject" tick={{ fill: 'var(--color-text-secondary)', fontSize: 13 }} />
                         <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
                         <Radar name="Optimal" dataKey="A" stroke="var(--color-brand-primary)" fill="var(--color-brand-primary)" fillOpacity={0.5} />
                         <Tooltip contentStyle={{ backgroundColor: 'var(--color-bg-panel)', border: 'none', borderRadius: '8px' }} />

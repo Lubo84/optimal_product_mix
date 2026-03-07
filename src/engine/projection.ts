@@ -74,81 +74,102 @@ export function runProjection(inputs: UserInputs): ProjectionOutput {
         }
         cumulativeIlaIncome += ilaIncome;
 
-        // 4: ABP Drawdown
-        const abpDrawdown = calculateABPDrawdown(
-            openingABPBalance + abpInvestmentReturn,
+        // 4-11: ABP Drawdown & Age Pension (Target Income Iteration)
+        let bestDrawdown = 0;
+        let finalAssessableAssets = 0;
+        let finalDeemedIncome = 0;
+        let finalAssessableIncome = 0;
+        let finalAgePensionCalc: any = null;
+        let finalRentAssistance = 0;
+        let finalTotalIncome = 0;
+
+        const maxAvailableDrawdown = openingABPBalance + abpInvestmentReturn;
+        let minDrawdown = calculateABPDrawdown(
+            maxAvailableDrawdown,
             currentAge,
-            inputs.drawdownMode,
-            inputs.targetIncome,
-            ilaIncome,
-            inflationFactor
+            'Minimum statutory',
+            0,
+            0,
+            1
         );
+
+        // Target income is specified in real terms, scale to nominal for the year
+        const targetIncomeNominal = inputs.targetIncome * inflationFactor;
+
+        let currentDrawdown = minDrawdown;
+
+        for (let iter = 0; iter < 5; iter++) {
+            currentDrawdown = Math.max(minDrawdown, Math.min(currentDrawdown, maxAvailableDrawdown));
+
+            const testClosingBalance = maxAvailableDrawdown - currentDrawdown;
+            const assessAssets = calculateAssessableAssets(inputs, testClosingBalance, ilaPurchasePrice, year, currentAge);
+            const deemedInc = calculateDeemedIncome(inputs, testClosingBalance);
+            const assessInc = calculateAssessableIncome(inputs, deemedInc, ilaIncome);
+            const apCalc = calculateAgePension(inputs, assessAssets, assessInc, inflationFactor);
+
+            let ap = apCalc.pensionPayable;
+            let ra = 0;
+            if (inputs.homeowner === 'No') {
+                let maxRA = (inputs.coupleStatus === 'Single' ? AP_PARAMS.rentMaxRateSingle : AP_PARAMS.rentMaxRateCoupleCombined) * inflationFactor;
+                let maxPension = (inputs.coupleStatus === 'Single' ? AP_PARAMS.maxRateSingle : AP_PARAMS.maxRateCoupleCombined) * inflationFactor;
+                const greaterReduction = Math.max(apCalc.assetsTestReduction, apCalc.incomeTestReduction);
+                let totalEntitlement = Math.max(0, maxPension + maxRA - greaterReduction);
+                ra = Math.min(maxRA, totalEntitlement);
+                ap = totalEntitlement - ra;
+            }
+
+            let totalInc = currentDrawdown + ilaIncome + ap + ra;
+
+            finalAssessableAssets = assessAssets;
+            finalDeemedIncome = deemedInc;
+            finalAssessableIncome = assessInc;
+            finalAgePensionCalc = apCalc;
+            finalRentAssistance = ra;
+            finalTotalIncome = totalInc;
+
+            if (inputs.drawdownMode === 'Minimum statutory') {
+                bestDrawdown = currentDrawdown;
+                break;
+            }
+
+            const shortfall = targetIncomeNominal - totalInc;
+            if (Math.abs(shortfall) < 1 || currentDrawdown >= maxAvailableDrawdown || (shortfall < 0 && currentDrawdown <= minDrawdown)) {
+                bestDrawdown = currentDrawdown;
+                break;
+            }
+
+            currentDrawdown += shortfall;
+            bestDrawdown = currentDrawdown;
+        }
+
+        const abpDrawdown = bestDrawdown;
 
         // 5: Closing ABP balance
         const closingABPBalance = openingABPBalance + abpInvestmentReturn - abpDrawdown;
         abpBalance = closingABPBalance;
 
-        // 6: Assessable Assets
-        const assessableAssets = calculateAssessableAssets(
-            inputs, closingABPBalance, ilaPurchasePrice, year, currentAge
-        );
-
-        // 7: Deemed Income
-        const deemedIncome = calculateDeemedIncome(inputs, closingABPBalance);
-
-        // 8: Assessable Income
-        const assessableIncome = calculateAssessableIncome(inputs, deemedIncome, ilaIncome);
-
-        // 9-11: Age Pension & Rent Assistance (Handled together)
-        const agePensionCalc = calculateAgePension(
-            inputs,
-            assessableAssets,
-            assessableIncome,
-            inflationFactor
-        );
-
-        // RA logic per spec: 
-        let rentAssistance = 0;
-        let pensionPayable = agePensionCalc.pensionPayable;
-        if (inputs.homeowner === 'No') {
-            let maxRA = inputs.coupleStatus === 'Single' ? AP_PARAMS.rentMaxRateSingle : AP_PARAMS.rentMaxRateCoupleCombined;
-            maxRA *= inflationFactor;
-
-            let maxPension = inputs.coupleStatus === 'Single' ? AP_PARAMS.maxRateSingle : AP_PARAMS.maxRateCoupleCombined;
-            maxPension *= inflationFactor;
-
-            const greaterReduction = Math.max(agePensionCalc.assetsTestReduction, agePensionCalc.incomeTestReduction);
-
-            if (maxPension + maxRA - greaterReduction > 0) {
-                rentAssistance = Math.min(maxRA, maxPension + maxRA - greaterReduction); // Standard taper behaviour
-                pensionPayable = Math.max(0, maxPension + rentAssistance - greaterReduction - rentAssistance); // Re-separate
-                // Actually, the simplest is logic: pensionPayable is the base, rentAssistance is the RA component.
-                let totalEntitlement = Math.max(0, maxPension + maxRA - greaterReduction);
-                rentAssistance = Math.min(maxRA, totalEntitlement);
-                pensionPayable = totalEntitlement - rentAssistance;
-            }
-        }
-
-        const totalIncome = abpDrawdown + ilaIncome + pensionPayable + rentAssistance;
+        // Convert to real values for the array
+        const real = (val: number) => val / inflationFactor;
 
         years.push({
             year,
             age: currentAge,
             spouseAge: inputs.coupleStatus === 'Couple' ? inputs.spouseAge + (year - 1) : 0,
-            openingABPBalance,
-            abpInvestmentReturn,
-            ilaIncome,
-            abpDrawdown,
-            closingABPBalance,
-            assessableAssets,
-            deemedIncome,
-            assessableIncome,
-            assetsTestReduction: agePensionCalc.assetsTestReduction,
-            incomeTestReduction: agePensionCalc.incomeTestReduction,
-            bindingTest: agePensionCalc.bindingTest,
-            agePensionEntitlement: pensionPayable,
-            rentAssistance,
-            totalIncome
+            openingABPBalance: real(openingABPBalance),
+            abpInvestmentReturn: real(abpInvestmentReturn),
+            ilaIncome: real(ilaIncome),
+            abpDrawdown: real(abpDrawdown),
+            closingABPBalance: real(closingABPBalance),
+            assessableAssets: real(finalAssessableAssets),
+            deemedIncome: real(finalDeemedIncome),
+            assessableIncome: real(finalAssessableIncome),
+            assetsTestReduction: real(finalAgePensionCalc.assetsTestReduction),
+            incomeTestReduction: real(finalAgePensionCalc.incomeTestReduction),
+            bindingTest: finalAgePensionCalc.bindingTest,
+            agePensionEntitlement: real(finalAgePensionCalc.pensionPayable),
+            rentAssistance: real(finalRentAssistance),
+            totalIncome: real(finalTotalIncome),
+            inflationFactor
         });
     }
 
@@ -165,11 +186,9 @@ function extractMetrics(years: ProjectionYearOutput[], inputs: UserInputs): RICM
     const incomes: number[] = [];
 
     years.forEach(y => {
-        // Discount back to present value using inflation rate to get real $
-        const r = Math.pow(1 + inputs.inflation, y.year - 1);
-        totalPV += (y.totalIncome / r);
-        totalNominal += y.totalIncome;
-        incomes.push(y.totalIncome / r);
+        totalPV += y.totalIncome; // Already in real dollars!
+        totalNominal += y.totalIncome * y.inflationFactor;
+        incomes.push(y.totalIncome);
     });
 
     // 2. CV of Income (Real)

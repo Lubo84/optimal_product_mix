@@ -171,6 +171,26 @@ export const Sidebar: React.FC<SidebarProps> = ({ inputs, setInputs, isAuditMode
                     <label htmlFor="optimiser" style={{ cursor: 'pointer', fontSize: '0.9rem' }}>Enable Optimiser Mode</label>
                 </div>
 
+                {inputs.optimiserMode && (
+                    <>
+                        <h4 style={{ marginTop: '2rem', marginBottom: '1rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '0.5rem' }}>RIC Objectives Weighting</h4>
+                        <div className="form-group flex gap-2">
+                            <div className="w-full">
+                                <label className="form-label" style={{ fontSize: '0.8rem' }}>Income (%)</label>
+                                <input type="number" className="form-control" value={inputs.weightIncome} onChange={e => handleChange('weightIncome', parseInt(e.target.value) || 0)} />
+                            </div>
+                            <div className="w-full">
+                                <label className="form-label" style={{ fontSize: '0.8rem' }}>Risk (%)</label>
+                                <input type="number" className="form-control" value={inputs.weightRisk} onChange={e => handleChange('weightRisk', parseInt(e.target.value) || 0)} />
+                            </div>
+                            <div className="w-full">
+                                <label className="form-label" style={{ fontSize: '0.8rem' }}>Flexibility (%)</label>
+                                <input type="number" className="form-control" value={inputs.weightFlexibility} onChange={e => handleChange('weightFlexibility', parseInt(e.target.value) || 0)} />
+                            </div>
+                        </div>
+                    </>
+                )}
+
                 <h4 style={{ marginTop: '2rem', marginBottom: '1rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '0.5rem' }}>Scenarios</h4>
 
                 <div className="form-group">

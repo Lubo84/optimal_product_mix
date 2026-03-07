@@ -96,6 +96,7 @@ export interface ProjectionYearOutput {
     rentAssistance: number;
 
     totalIncome: number;
+    inflationFactor: number;
 }
 
 export interface ProjectionOutput {
