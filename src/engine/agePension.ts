@@ -2,8 +2,8 @@ import type { UserInputs } from './types';
 
 // Exported standard 20 March 2026 Age Pension Parameters
 export const AP_PARAMS = {
-    maxRateSingle: 1200.90 * 26, // Annualised
-    maxRateCoupleCombined: 1810.40 * 26, // Annualised
+    maxRateSingle: 1178.70 * 26, // Annualised (Current)
+    maxRateCoupleCombined: 1777.00 * 26, // Annualised (Current)
 
     // Assets Test Lower Threshold (Full Pension)
     assetThresholdSingleHomeowner: 321500,
