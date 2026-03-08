@@ -91,13 +91,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, inputs }) => {
                         <YAxis stroke="var(--color-text-muted)" tickFormatter={(val) => `$${Math.round(val / 1000)}k`} />
                         <Tooltip content={<CustomTooltip />} />
                         <Legend />
+                        <Area type="monotone" dataKey="agePension" name="Age Pension" stackId="1" stroke="var(--color-chart-ap)" fill="var(--color-chart-ap)" fillOpacity={0.6} />
+                        <Area type="monotone" dataKey="rentAssistance" name="Rent Assist" stackId="1" stroke="var(--color-chart-ra)" fill="var(--color-chart-ra)" fillOpacity={0.6} />
+                        <Area type="monotone" dataKey="ilaIncome" name="ILA Income" stackId="1" stroke="var(--color-chart-ila)" fill="var(--color-chart-ila)" fillOpacity={0.6} />
                         <Area type="monotone" dataKey="abpDrawdown" name="ABP Drawdown" stackId="1" stroke="var(--color-chart-abp)" fill="var(--color-chart-abp)" fillOpacity={0.6} />
                         {inputs.coupleStatus === 'Couple' && (
                             <Area type="monotone" dataKey="spouseDrawdown" name="Spouse Drawdown" stackId="1" stroke="var(--color-brand-accent)" fill="var(--color-brand-accent)" fillOpacity={0.4} />
                         )}
-                        <Area type="monotone" dataKey="ilaIncome" name="ILA Income" stackId="1" stroke="var(--color-chart-ila)" fill="var(--color-chart-ila)" fillOpacity={0.6} />
-                        <Area type="monotone" dataKey="agePension" name="Age Pension" stackId="1" stroke="var(--color-chart-ap)" fill="var(--color-chart-ap)" fillOpacity={0.6} />
-                        <Area type="monotone" dataKey="rentAssistance" name="Rent Assist" stackId="1" stroke="var(--color-chart-ra)" fill="var(--color-chart-ra)" fillOpacity={0.6} />
                     </AreaChart>
                 </ResponsiveContainer>
             </div>
