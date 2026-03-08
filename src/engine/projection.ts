@@ -75,19 +75,10 @@ export function runProjection(inputs: UserInputs): ProjectionOutput {
         }
         cumulativeIlaIncome += ilaIncome;
 
-        // Spouse Super Depletion (assumed 100% ABP at minimum statutory drawdown)
-        let spouseClosingBalance = 0;
-        if (inputs.coupleStatus === 'Couple' && currentSpouseSuper > 0) {
-            const currentSpouseAge = inputs.spouseAge + (year - 1);
-            const spouseInvestmentReturn = currentSpouseSuper * strategyReturn;
-            const maxAvailable = currentSpouseSuper + spouseInvestmentReturn;
-            const spouseDrawdown = calculateABPDrawdown(maxAvailable, currentSpouseAge, 'Minimum statutory', 0, 0, 1);
-            spouseClosingBalance = maxAvailable - spouseDrawdown;
-            currentSpouseSuper = spouseClosingBalance;
-        }
-
         // 4-11: ABP Drawdown & Age Pension (Target Income Iteration)
         let bestDrawdown = 0;
+        let bestSpouseDrawdown = 0;
+        let spouseClosingBalance = 0;
         let finalAssessableAssets = 0;
         let finalDeemedIncome = 0;
         let finalAssessableIncome = 0;
@@ -95,7 +86,20 @@ export function runProjection(inputs: UserInputs): ProjectionOutput {
         let finalRentAssistance = 0;
         let finalTotalIncome = 0;
 
+        // Maximum drawdowns available
         const maxAvailableDrawdown = openingABPBalance + abpInvestmentReturn;
+
+        // Spouse baseline calculations
+        let spouseInvestmentReturn = 0;
+        let maxSpouseAvailable = 0;
+        let minSpouseDrawdown = 0;
+        if (inputs.coupleStatus === 'Couple' && currentSpouseSuper > 0) {
+            const currentSpouseAge = inputs.spouseAge + (year - 1);
+            spouseInvestmentReturn = currentSpouseSuper * strategyReturn;
+            maxSpouseAvailable = currentSpouseSuper + spouseInvestmentReturn;
+            minSpouseDrawdown = calculateABPDrawdown(maxSpouseAvailable, currentSpouseAge, 'Minimum statutory', 0, 0, 1);
+        }
+
         let minDrawdown = calculateABPDrawdown(
             maxAvailableDrawdown,
             currentAge,
@@ -109,13 +113,17 @@ export function runProjection(inputs: UserInputs): ProjectionOutput {
         const targetIncomeNominal = inputs.targetIncome * inflationFactor;
 
         let currentDrawdown = minDrawdown;
+        let currentSpouseDrawdown = minSpouseDrawdown;
 
         for (let iter = 0; iter < 5; iter++) {
             currentDrawdown = Math.max(minDrawdown, Math.min(currentDrawdown, maxAvailableDrawdown));
+            currentSpouseDrawdown = Math.max(minSpouseDrawdown, Math.min(currentSpouseDrawdown, maxSpouseAvailable));
 
             const testClosingBalance = maxAvailableDrawdown - currentDrawdown;
-            const assessAssets = calculateAssessableAssets(inputs, testClosingBalance, ilaPurchasePrice, year, currentAge, spouseClosingBalance);
-            const deemedInc = calculateDeemedIncome(inputs, testClosingBalance, spouseClosingBalance);
+            const testSpouseClosingBalance = maxSpouseAvailable - currentSpouseDrawdown;
+
+            const assessAssets = calculateAssessableAssets(inputs, testClosingBalance, ilaPurchasePrice, year, currentAge, testSpouseClosingBalance);
+            const deemedInc = calculateDeemedIncome(inputs, testClosingBalance, testSpouseClosingBalance);
             const assessInc = calculateAssessableIncome(inputs, deemedInc, ilaIncome);
             const apCalc = calculateAgePension(inputs, assessAssets, assessInc, inflationFactor);
 
@@ -128,13 +136,13 @@ export function runProjection(inputs: UserInputs): ProjectionOutput {
 
                 const greaterReduction = Math.max(apCalc.assetsTestReduction, apCalc.incomeTestReduction);
 
-                // If they are eligible for at least $1 of Age Pension OR Rent Assistance covers the reduction gap
+                // If they are eligible for at least $1 of Age Pension OR Rent Assistance covers the gap
                 let totalEntitlement = Math.max(0, maxPension + maxRA - greaterReduction);
                 ra = Math.min(maxRA, totalEntitlement);
                 ap = Math.max(0, totalEntitlement - ra); // Base pension is the remainder
             }
 
-            let totalInc = currentDrawdown + ilaIncome + ap + ra;
+            let totalInc = currentDrawdown + currentSpouseDrawdown + ilaIncome + ap + ra;
 
             finalAssessableAssets = assessAssets;
             finalDeemedIncome = deemedInc;
@@ -142,23 +150,55 @@ export function runProjection(inputs: UserInputs): ProjectionOutput {
             finalAgePensionCalc = { ...apCalc, pensionPayable: ap };
             finalRentAssistance = ra;
             finalTotalIncome = totalInc;
+            spouseClosingBalance = testSpouseClosingBalance;
 
             if (inputs.drawdownMode === 'Minimum statutory') {
                 bestDrawdown = currentDrawdown;
+                bestSpouseDrawdown = currentSpouseDrawdown;
                 break;
             }
 
             const shortfall = targetIncomeNominal - totalInc;
-            if (Math.abs(shortfall) < 1 || currentDrawdown >= maxAvailableDrawdown || (shortfall < 0 && currentDrawdown <= minDrawdown)) {
+
+            const canPrimaryIncrease = currentDrawdown < maxAvailableDrawdown;
+            const canSpouseIncrease = currentSpouseDrawdown < maxSpouseAvailable;
+
+            if (Math.abs(shortfall) < 1 || (!canPrimaryIncrease && !canSpouseIncrease)) {
                 bestDrawdown = currentDrawdown;
+                bestSpouseDrawdown = currentSpouseDrawdown;
                 break;
             }
 
-            currentDrawdown += shortfall;
+            // Distribute shortfall proportionally based on available remaining balances
+            if (shortfall > 0) {
+                const primaryRemaining = maxAvailableDrawdown - currentDrawdown;
+                const spouseRemaining = maxSpouseAvailable - currentSpouseDrawdown;
+                const totalRemaining = primaryRemaining + spouseRemaining;
+
+                if (totalRemaining > 0) {
+                    const primaryShare = primaryRemaining / totalRemaining;
+                    currentDrawdown += (shortfall * primaryShare);
+                    currentSpouseDrawdown += (shortfall * (1 - primaryShare));
+                }
+            } else {
+                // Shortfall is negative (too much income), try to scale back down to minimums
+                const primaryExcess = currentDrawdown - minDrawdown;
+                const spouseExcess = currentSpouseDrawdown - minSpouseDrawdown;
+                const totalExcess = primaryExcess + spouseExcess;
+
+                if (totalExcess > 0) {
+                    const primaryShare = primaryExcess / totalExcess;
+                    currentDrawdown += (shortfall * primaryShare);
+                    currentSpouseDrawdown += (shortfall * (1 - primaryShare));
+                }
+            }
+
             bestDrawdown = currentDrawdown;
+            bestSpouseDrawdown = currentSpouseDrawdown;
         }
 
         const abpDrawdown = bestDrawdown;
+        currentSpouseSuper = spouseClosingBalance;
 
         // 5: Closing ABP balance
         const closingABPBalance = openingABPBalance + abpInvestmentReturn - abpDrawdown;
@@ -176,6 +216,7 @@ export function runProjection(inputs: UserInputs): ProjectionOutput {
             abpInvestmentReturn: real(abpInvestmentReturn),
             ilaIncome: real(ilaIncome),
             abpDrawdown: real(abpDrawdown),
+            spouseDrawdown: real(bestSpouseDrawdown),
             closingABPBalance: real(closingABPBalance),
             assessableAssets: real(finalAssessableAssets),
             deemedIncome: real(finalDeemedIncome),

@@ -83,6 +83,7 @@ export interface ProjectionYearOutput {
     abpInvestmentReturn: number;
     ilaIncome: number;
     abpDrawdown: number;
+    spouseDrawdown: number; // Added for separate income tracking
     closingABPBalance: number;
 
     assessableAssets: number;
