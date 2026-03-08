@@ -34,7 +34,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, inputs }) => {
 
     const allocationData = data.allSplits.map(s => ({
         split: s.split,
-        score: Math.round(s.metrics.compositeScore),
+        score: Number(s.metrics.compositeScore.toFixed(2)),
         totalPV: Math.round(s.metrics.totalLifetimeIncomeExpectedValue)
     }));
 
