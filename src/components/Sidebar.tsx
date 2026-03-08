@@ -160,7 +160,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ inputs, setInputs, isAuditMode
                         <input
                             type="range"
                             className="w-full"
-                            min="0" max="100" step="5"
+                            min="0" max="50" step="5"
                             value={inputs.allocationSplitILA}
                             onChange={e => handleChange('allocationSplitILA', parseInt(e.target.value))}
                             disabled={inputs.optimiserMode}

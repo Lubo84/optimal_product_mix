@@ -10,8 +10,8 @@ export interface OptimiserResult {
 export function runOptimiser(inputs: UserInputs, stepSize: number = 10): OptimiserResult[] {
     const results: OptimiserResult[] = [];
 
-    // 1. Run projections for all splits
-    for (let split = 0; split <= 100; split += stepSize) {
+    // 1. Run projections for all splits (capped at 50% max ILA allocation)
+    for (let split = 0; split <= 50; split += stepSize) {
         const testInputs = { ...inputs, allocationSplitILA: split, optimiserMode: false };
         const output = runProjection(testInputs);
         results.push({ split, metrics: output.metrics, projection: output });
