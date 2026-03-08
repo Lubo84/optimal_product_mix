@@ -23,6 +23,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, inputs }) => {
         rentAssistance: Math.round(y.rentAssistance),
         totalIncome: Math.round(y.totalIncome),
         abpBalance: Math.round(y.closingABPBalance),
+        spouseBalance: Math.round(y.spouseSuperBalance),
         assessableAssets: Math.round(y.assessableAssets)
     }));
 
@@ -139,6 +140,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, inputs }) => {
                         <YAxis stroke="var(--color-text-muted)" tickFormatter={(val) => `$${val / 1000}k`} />
                         <Tooltip content={<CustomTooltip />} />
                         <Line type="monotone" dataKey="abpBalance" name="ABP Balance" stroke="var(--color-brand-primary)" strokeWidth={3} dot={false} />
+                        {inputs.coupleStatus === 'Couple' && (
+                            <Line type="monotone" dataKey="spouseBalance" name="Spouse Balance" stroke="var(--color-brand-accent)" strokeWidth={3} dot={false} />
+                        )}
                         <Line type="monotone" dataKey="assessableAssets" name="Assessable Assets" stroke="var(--color-warning)" strokeDasharray="5 5" strokeWidth={2} dot={false} />
                     </LineChart>
                 </ResponsiveContainer>

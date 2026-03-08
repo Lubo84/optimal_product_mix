@@ -25,7 +25,8 @@ export const AuditTable: React.FC<AuditTableProps> = ({ data }) => {
                             <th style={{ padding: '0.75rem' }}>ABP Return</th>
                             <th style={{ padding: '0.75rem' }}>ABP Draw</th>
                             <th style={{ padding: '0.75rem' }}>Spouse Draw</th>
-                            <th style={{ padding: '0.75rem' }}>Close ABP</th>
+                            <th style={{ padding: '0.75rem' }}>Primary ABP Close</th>
+                            <th style={{ padding: '0.75rem' }}>Spouse ABP Close</th>
                             <th style={{ padding: '0.75rem', borderLeft: '1px solid rgba(255,255,255,0.1)' }}>ILA Income</th>
                             <th style={{ padding: '0.75rem', borderLeft: '1px solid rgba(255,255,255,0.1)' }}>Assessable Assets</th>
                             <th style={{ padding: '0.75rem' }}>Deemed Inc</th>
@@ -46,6 +47,7 @@ export const AuditTable: React.FC<AuditTableProps> = ({ data }) => {
                                 <td style={{ padding: '0.75rem', textAlign: 'right', color: 'var(--color-chart-abp)' }}>${Math.round(y.abpDrawdown).toLocaleString()}</td>
                                 <td style={{ padding: '0.75rem', textAlign: 'right', color: 'var(--color-brand-accent)' }}>${Math.round(y.spouseDrawdown).toLocaleString()}</td>
                                 <td style={{ padding: '0.75rem', textAlign: 'right' }}>${Math.round(y.closingABPBalance).toLocaleString()}</td>
+                                <td style={{ padding: '0.75rem', textAlign: 'right', color: 'var(--color-text-secondary)' }}>${Math.round(y.spouseSuperBalance).toLocaleString()}</td>
                                 <td style={{ padding: '0.75rem', textAlign: 'right', borderLeft: '1px solid rgba(255,255,255,0.1)', color: 'var(--color-chart-ila)' }}>${Math.round(y.ilaIncome).toLocaleString()}</td>
 
                                 <td style={{ padding: '0.75rem', textAlign: 'right', borderLeft: '1px solid rgba(255,255,255,0.1)' }}>${Math.round(y.assessableAssets).toLocaleString()}</td>
