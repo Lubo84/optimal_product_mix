@@ -1,6 +1,6 @@
 import React from 'react';
 import { COHORTS } from '../engine';
-import type { UserInputs, DrawdownMode, ScenarioType } from '../engine';
+import type { UserInputs, DrawdownMode, ScenarioType, StrategyType } from '../engine';
 
 interface SidebarProps {
     inputs: UserInputs;
@@ -17,7 +17,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ inputs, setInputs, isAuditMode
     };
 
     const handleChange = (field: keyof UserInputs, value: any) => {
-        setInputs(prev => ({ ...prev, [field]: value }));
+        setInputs((prev: UserInputs) => ({ ...prev, [field]: value }));
     };
 
     return (
@@ -112,6 +112,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ inputs, setInputs, isAuditMode
                 </div>
 
                 <h4 style={{ marginTop: '2rem', marginBottom: '1rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '0.5rem' }}>ABP & ILA Params</h4>
+
+                <div className="form-group">
+                    <label className="form-label">ABP Return Strategy</label>
+                    <select className="form-control" value={inputs.abpStrategy} onChange={e => handleChange('abpStrategy', e.target.value as StrategyType)}>
+                        <option value="Balanced">Balanced (CPI + 4.5% pa)</option>
+                        <option value="Conservative">Conservative (CPI + 4.0% pa)</option>
+                        <option value="Stable">Stable (CPI + 3.0% pa)</option>
+                    </select>
+                </div>
 
                 <div className="form-group">
                     <label className="form-label">Drawdown Mode</label>

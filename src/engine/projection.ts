@@ -14,23 +14,24 @@ import {
 import { calculateABPDrawdown } from './abp';
 import { calculateILAStartingIncome, calculateNextYearILAIncome } from './ila';
 
-const RETURNS = {
-    'Base Case': { Balanced: 0.07, Conservative: 0.055, Stable: 0.045 },
-    'Low Return': { Balanced: 0.05, Conservative: 0.035, Stable: 0.025 },
-    'High Inflation': { Balanced: 0.07, Conservative: 0.055, Stable: 0.045 },
-    'Long Life': { Balanced: 0.07, Conservative: 0.055, Stable: 0.045 }
+const STRATEGY_MARGINS = {
+    'Balanced': 0.045,
+    'Conservative': 0.040,
+    'Stable': 0.030
+};
+
+const SCENARIO_PENALTIES = {
+    'Base Case': 0,
+    'Low Return': -0.02, // 2% penalty to nominal return in Low Return scenario
+    'High Inflation': 0,
+    'Long Life': 0
 };
 
 export function runProjection(inputs: UserInputs): ProjectionOutput {
     const years: ProjectionYearOutput[] = [];
 
-    // Configuration Overrides per Scenario
+    // Base Inflation
     let inflation = inputs.inflation;
-    // Let high inflation be 4.0% for first 10 yrs, then 2.5%
-    const baseReturns = RETURNS[inputs.scenario];
-    const strategyReturn = baseReturns[inputs.abpStrategy];
-    // ILA underlying same as Balanced
-    const ilaReturn = baseReturns['Balanced'];
 
     const purchaseAge = inputs.age;
     const totalBalance = inputs.superBalance;
@@ -62,6 +63,13 @@ export function runProjection(inputs: UserInputs): ProjectionOutput {
             currentInflation = year <= 10 ? 0.04 : 0.025;
         }
         const inflationFactor = Math.pow(1 + currentInflation, year - 1);
+
+        // Dynamic Returns based on CPI + Margin
+        const baseMargin = STRATEGY_MARGINS[inputs.abpStrategy];
+        const scenarioPenalty = SCENARIO_PENALTIES[inputs.scenario];
+
+        const strategyReturn = currentInflation + baseMargin + scenarioPenalty;
+        const ilaReturn = currentInflation + STRATEGY_MARGINS['Balanced'] + scenarioPenalty;
 
         // 1 & 2: Opening ABP Balance and Investment Return
         const openingABPBalance = abpBalance;
